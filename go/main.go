@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -26,6 +27,10 @@ type formInput struct {
 	LastName    string `json:"last_name"`
 	Email       string `json:"email"`
 	PhoneNumber string `json:"phone_number"`
+}
+
+type ListPageData struct {
+	Inputs []formInput
 }
 
 func (f formInput) validate() error {
@@ -98,6 +103,31 @@ func handleForm(resp http.ResponseWriter, req *http.Request) {
 	http.ServeFile(resp, req, cwd + "/form.html")
 }
 
+func handleList(resp http.ResponseWriter, req *http.Request) {
+	cwd, _ := os.Getwd()
+	tmpl := template.Must(template.ParseFiles(cwd + "/list.html"))
+
+	file, err := ioutil.ReadFile(dataFile)
+	if err != nil {
+		resp.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(resp, err.Error())
+		return
+	}
+	var forms []formInput
+	err = json.Unmarshal(file, &forms)
+	if err != nil {
+		resp.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(resp, err.Error())
+		return
+	}
+
+	data := ListPageData{
+		Inputs: forms,
+	}
+
+	tmpl.Execute(resp, data)
+}
+
 func run() (s *http.Server) {
 	err := loadEnv(envFile)
 	if err != nil {
@@ -112,6 +142,7 @@ func run() (s *http.Server) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleFunc)
 	mux.HandleFunc("/form", handleForm)
+	mux.HandleFunc("/list", handleList)
 
 	s = &http.Server{
 		Addr:           port,
