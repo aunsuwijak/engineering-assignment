@@ -88,6 +88,11 @@ func handleFunc(resp http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func handleForm(resp http.ResponseWriter, req *http.Request) {
+	cwd, _ := os.Getwd()
+	http.ServeFile(resp, req, cwd + "/form.html")
+}
+
 func run() (s *http.Server) {
 	err := loadEnv(envFile)
 	if err != nil {
@@ -101,6 +106,7 @@ func run() (s *http.Server) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleFunc)
+	mux.HandleFunc("/form", handleForm)
 
 	s = &http.Server{
 		Addr:           port,
